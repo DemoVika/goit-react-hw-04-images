@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import css from './app.module.css';
 import { Searchbar } from './searchbar/Searchbar';
 import { ImageGallery } from './imageGallery/ImageGallery';
@@ -7,61 +7,47 @@ import { Button } from './button/Button';
 import { Loader } from './loader/Loader';
 import { Modal } from './modal/Modal';
 
-export class App extends Component {
-  state = {
-    query: '',
-    cards: [],
-    error: null,
-    status: 'idle',
-    currentPage: 1,
-    loadMore: false,
-    modal: false,
-    modalImg: '',
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [cards, setCards] = useState([]);
+  const [error, setError] = useState(null);
+  const [status, setStatus] = useState('idle');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadMore, setloadMore] = useState(false);
+  const [modal, setModal] = useState(false);
+  const [modalImg, setModalImg] = useState('');
+
+  useEffect(() => {
+    if (query === '') return;
+
+    setStatus('pending');
+    apiRequest(query, currentPage)
+      .then(response => {
+        setCards(prevState => [...prevState, ...response.hits]);
+        setStatus('resolved');
+        setloadMore(currentPage < Math.ceil(response.totalHits / 12));
+      })
+      .catch(error => setStatus('rejected'));
+  }, [query, currentPage]);
+
+  const loadMoreFn = () => {
+    setCurrentPage(prevState => prevState + 1);
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    const { query, currentPage } = this.state;
-    if (currentPage !== prevState.currentPage || query !== prevState.query) {
-      this.setState({ status: 'pending' });
-
-      apiRequest(query, currentPage)
-        .then(response => {
-          this.setState(prevState => {
-            return {
-              cards: [...prevState.cards, ...response.hits],
-              status: 'resolved',
-              loadMore:
-                this.state.currentPage < Math.ceil(response.totalHits / 12),
-            };
-          });
-        })
-        .catch(error => this.setState({ error, status: 'rejected' }));
-    }
-  }
-
-  loadMoreFn = () => {
-    this.setState(prevState => {
-      return { currentPage: prevState.currentPage + 1 };
-    });
+  const onSubmit = value => {
+    setQuery(value);
+    setCards([]);
+    setCurrentPage(1);
   };
 
-  onSubmit = value => {
-    this.setState({
-      query: value,
-      cards: [],
-      currentPage: 1,
-    });
+  const onCardClick = img => {
+    setModal(true);
+    setModalImg(img);
   };
 
-  onCardClick = img => {
-    this.setState({ modal: true, modalImg: img });
-  };
-  closeModal = () => {
-    this.setState({ modal: false });
-  };
+  const closeModal = () => setModal(false);
 
-  galleryRender = () => {
-    const { status, cards } = this.state;
+  const galleryRender = () => {
     if (status === 'idle') {
       return <div>Введите тему</div>;
     }
@@ -71,28 +57,19 @@ export class App extends Component {
     }
 
     if (status === 'resolved' || status === 'pending') {
-      return <ImageGallery cards={cards} onCardClick={this.onCardClick} />;
+      return <ImageGallery cards={cards} onCardClick={onCardClick} />;
     }
   };
 
-  render() {
-    return (
-      <div className={css.app}>
-        <Searchbar onSubmit={this.onSubmit} />
-        {this.galleryRender()}
-        {/* <ImageGallery
-          cards={this.state.cards}
-          // status={this.state.status}
-          onCardClick={this.onCardClick}
-        /> */}
-        {this.state.status === 'pending' && <Loader />}
-        {this.state.status === 'resolved' && this.state.loadMore && (
-          <Button loadMoreFn={this.loadMoreFn}></Button>
-        )}
-        {this.state.modal && (
-          <Modal modalImg={this.state.modalImg} closeModal={this.closeModal} />
-        )}
-      </div>
-    );
-  }
-}
+  return (
+    <div className={css.app}>
+      <Searchbar onSubmit={onSubmit} />
+      {galleryRender()}
+      {status === 'pending' && <Loader />}
+      {status === 'resolved' && loadMore && (
+        <Button loadMoreFn={loadMoreFn}></Button>
+      )}
+      {modal && <Modal modalImg={modalImg} closeModal={closeModal} />}
+    </div>
+  );
+};
