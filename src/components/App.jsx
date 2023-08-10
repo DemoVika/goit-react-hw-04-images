@@ -27,7 +27,10 @@ export const App = () => {
         setStatus('resolved');
         setloadMore(currentPage < Math.ceil(response.totalHits / 12));
       })
-      .catch(error => setStatus('rejected'));
+      .catch(error => {
+        setStatus('rejected');
+        setError(error);
+      });
   }, [query, currentPage]);
 
   const loadMoreFn = () => {
