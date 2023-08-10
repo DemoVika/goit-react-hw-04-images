@@ -10,7 +10,6 @@ import { Modal } from './modal/Modal';
 export const App = () => {
   const [query, setQuery] = useState('');
   const [cards, setCards] = useState([]);
-  const [error, setError] = useState(null);
   const [status, setStatus] = useState('idle');
   const [currentPage, setCurrentPage] = useState(1);
   const [loadMore, setloadMore] = useState(false);
@@ -29,7 +28,7 @@ export const App = () => {
       })
       .catch(error => {
         setStatus('rejected');
-        setError(error);
+        console.log(error);
       });
   }, [query, currentPage]);
 
